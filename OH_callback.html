@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Callback Form</title>
+  <style>
+    :root {
+      /* Light theme: soft blues */
+      --bg: #f5f9ff;
+      --card: #ffffff;
+      --fg: #0f172a;
+      --muted: #475569;
+      --accent: #2563eb;
+      --accent-2: #3b82f6;
+      --border: #dbe7ff;
+      --ok: #047857;
+      --err: #b91c1c;
+      --radius: 14px;
+      --shadow: 0 10px 24px rgba(2, 28, 77, 0.08);
+      --shadow-inset: 0 0 0 1px rgba(2, 28, 77, 0.03) inset;
+      --field: #f8fbff;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 24px;
+      background:
+        radial-gradient(1200px 1200px at 10% -5%, rgba(59,130,246,0.12), transparent 40%),
+        radial-gradient(900px 900px at 100% -10%, rgba(37,99,235,0.08), transparent 35%),
+        var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans";
+      line-height: 1.35;
+    }
+
+    .wrap { max-width: 860px; margin: 0 auto; }
+    .header { margin-bottom: 18px; }
+    .header h1 { margin: 0 0 6px; font-size: 1.35rem; color: #0b1b4a; }
+    .header .subtitle { color: var(--muted); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow), var(--shadow-inset);
+    }
+
+    form { display: grid; gap: 14px; }
+    .row { display: grid; gap: 14px; }
+    .row.two { grid-template-columns: 1fr 1fr; }
+    @media (max-width: 720px) { .row.two { grid-template-columns: 1fr; } }
+
+    label { display: block; font-size: 0.92rem; color: #0b1b4a; margin-bottom: 6px; }
+
+    input[type="text"], input[type="tel"], select {
+      width: 100%; padding: 12px;
+      background: var(--field);
+      border: 1px solid var(--border);
+      color: var(--fg);
+      border-radius: 10px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    }
+    input:focus, select:focus {
+      border-color: #95b8ff;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.18);
+      background: #ffffff;
+    }
+
+    .muted-input { color: #0b1b4a; background: #f2f7ff; }
+    .tip { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+    .actions { display: flex; gap: 10px; margin-top: 4px; }
+
+    button {
+      appearance: none; border: 1px solid transparent;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      color: white; padding: 12px 16px; border-radius: 10px; cursor: pointer; font-weight: 600;
+      transition: transform 0.06s ease, filter 0.15s ease;
+      box-shadow: 0 10px 18px rgba(37,99,235,0.20);
+    }
+    button:hover { filter: brightness(1.03); }
+    button:active { transform: translateY(1px); }
+
+    .status { margin-top: 8px; font-size: 0.9rem; color: var(--muted); }
+    .ok { color: var(--ok); } .err { color: var(--err); }
+
+    /* Calendar */
+    .date-wrap { position: relative; }
+    .calendar {
+      position: absolute; top: calc(100% + 6px); left: 0; z-index: 1000;
+      background: #ffffff; border: 1px solid var(--border); border-radius: 12px;
+      width: 320px; max-width: 100%;
+      padding: 12px; box-shadow: var(--shadow);
+      display: none;
+    }
+    .calendar.visible { display: block; }
+    .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-size: 0.95rem; color: #0b1b4a; }
+    .cal-btn {
+      background: #eef5ff; color: #0b1b4a; border: 1px solid var(--border);
+      border-radius: 8px; padding: 4px 8px; cursor: pointer; font-size: 0.85rem;
+    }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; font-size: 0.92rem; }
+    .cal-grid .dow { color: var(--muted); text-align: center; padding: 4px 0; font-weight: 600; }
+    .cal-day {
+      text-align: center; padding: 8px 0; border-radius: 8px; cursor: pointer;
+      border: 1px solid transparent; background: #f8fbff; color: var(--fg);
+    }
+    .cal-day:hover { background: #eaf2ff; border-color: #cfe0ff; }
+    .cal-day.today { outline: 1px dashed #60a5fa; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>Callback Form</h1>
+      <div class="subtitle">Auto?fill from Five9 (URL parameters), schedule, and timezone.</div>
+    </div>
+
+    <div class="card">
+      <form id="callbackForm" novalidate>
+        <div class="row two">
+          <div>
+            <label for="firstName">First Name</label>
+            <input id="firstName" name="firstName" type="text" placeholder="Jane" autocomplete="given-name" />
+          </div>
+          <div>
+            <label for="lastName">Last Name</label>
+            <input id="lastName" name="lastName" type="text" placeholder="Doe" autocomplete="family-name" />
+          </div>
+        </div>
+
+        <div>
+          <label for="phone">Phone Number</label>
+          <input id="phone" name="phone" type="tel" placeholder="+1 (555) 555?1234" inputmode="tel" />
+          <div class="tip">Prefills from ANI; if missing, falls back to DNIS.</div>
+        </div>
+
+        <div class="row two">
+          <div>
+            <label for="campaign">Current Campaign</label>
+            <input id="campaign" name="campaign" type="text" placeholder="Spring Outreach" />
+          </div>
+          <div>
+            <label for="list">Current List</label>
+            <input id="list" name="list" type="text" placeholder="Prospects A" />
+          </div>
+        </div>
+
+        <div class="row two">
+          <div class="date-wrap">
+            <label for="callbackDateText">Callback Date</label>
+            <input id="callbackDateText" type="text" placeholder="YYYY-MM-DD" readonly />
+            <input id="callbackDate" name="callbackDate" type="hidden" />
+            <div id="calendar" class="calendar" role="dialog" aria-modal="true" aria-label="Calendar">
+              <div class="cal-head">
+                <button type="button" class="cal-btn" id="prevMonth">‹</button>
+                <div id="calLabel">Month YYYY</div>
+                <button type="button" class="cal-btn" id="nextMonth">›</button>
+              </div>
+              <div class="cal-grid" id="calGrid"></div>
+            </div>
+            <div class="tip">Click to open the calendar. Esc or click outside to close.</div>
+          </div>
+
+          <div>
+            <label for="timePicklist">Callback Time</label>
+            <select id="timePicklist" aria-label="Time picklist"></select>
+            <input type="hidden" id="callbackTime" name="callbackTime" />
+            <div class="tip">12?hour labels; stored as 24?hour HH:MM.</div>
+          </div>
+        </div>
+
+        <div class="row two">
+          <div>
+            <label for="timezone">Timezone (U.S.)</label>
+            <select id="timezone" name="timezone"></select>
+            <div class="tip">Offset auto-calculates with DST where applicable.</div>
+          </div>
+          <div>
+            <label for="offset">UTC Offset</label>
+            <input id="offset" class="muted-input" type="text" readonly placeholder="GMT+00:00" />
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit">Save</button>
+        </div>
+
+        <div id="status" class="status"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Utilities ----------
+    const $  = (id) => document.getElementById(id);
+    const pad = (n) => String(n).padStart(2, '0');
+
+    // ---------- Robust Five9 URL prefill (case-insensitive, dotted/simple names) ----------
+    (function prefillFromFive9Query() {
+      const raw = new URLSearchParams(window.location.search);
+      const map = {};
+      for (const [k, v] of raw.entries()) map[k.toLowerCase()] = v;
+
+      const getAny = (...keys) => {
+        for (const k of keys) {
+          const kk = k.toLowerCase();
+          if (kk in map && map[kk] != null && map[kk] !== '') return decodeURIComponent(map[kk]);
+        }
+        return '';
+      };
+
+      // Name
+      const first = getAny('Customer.first_name','first_name');
+      if (first) $('firstName').value = first;
+
+      const last = getAny('Customer.last_name','last_name');
+      if (last) $('lastName').value = last;
+
+      // Campaign / List
+      const campaign = getAny('Call.campaign_name','campaign_name');
+      if (campaign) $('campaign').value = campaign;
+
+      const listVal = getAny('Customer.List','list','List');
+      if (listVal) $('list').value = listVal;
+
+      // Phone: prefer ANI; fallback to DNIS
+      const ani  = getAny('ani','Call.ANI','ANI','phone');
+      const dnis = getAny('dnis','Call.DNIS','DNIS');
+      const phone = ani || dnis;
+      if (phone) $('phone').value = phone;
+    })();
+
+    // ---------- Time picklist (12h labels / 24h hidden value) ----------
+    const timePicklist = $('timePicklist');
+    const timeHidden   = $('callbackTime');
+
+    function to12(h24, m) {
+      let hr = parseInt(h24, 10), mm = parseInt(m, 10);
+      const ampm = hr >= 12 ? 'PM' : 'AM';
+      let h12 = hr % 12; if (h12 === 0) h12 = 12;
+      return `${pad(h12)}:${pad(mm)} ${ampm}`;
+    }
+
+    function buildTimePicklist(stepMinutes = 15, start = "00:00", end = "23:59") {
+      timePicklist.innerHTML = '';
+      const ph = document.createElement('option'); ph.value = ''; ph.textContent = '— Select a time —';
+      timePicklist.appendChild(ph);
+
+      const [sH, sM] = start.split(':').map(Number);
+      const [eH, eM] = end.split(':').map(Number);
+      const startMin = sH * 60 + sM;
+      const endMin = eH * 60 + eM;
+
+      for (let m = startMin; m <= endMin; m += stepMinutes) {
+        const hr24 = Math.floor(m / 60);
+        const mm = m % 60;
+        const opt = document.createElement('option');
+        opt.value = `${pad(hr24)}:${pad(mm)}`;      // stored value
+        opt.textContent = to12(hr24, mm);          // display label
+        timePicklist.appendChild(opt);
+      }
+    }
+
+    timePicklist.addEventListener('change', () => {
+      timeHidden.value = timePicklist.value || '';
+      if (!timeHidden.value) timePicklist.setCustomValidity('Please select a time.');
+      else timePicklist.setCustomValidity('');
+    });
+
+    (function presetTime() {
+      const now = new Date();
+      let hr = now.getHours();
+      let min = Math.round(now.getMinutes() / 15) * 15;
+      if (min === 60) { min = 0; hr = (hr + 1) % 24; }
+      buildTimePicklist(15, "00:00", "23:59");
+      const v = `${pad(hr)}:${pad(min)}`;
+      const opt = [...timePicklist.options].find(o => o.value === v);
+      timePicklist.value = opt ? v : '';
+      timeHidden.value = timePicklist.value || '';
+    })();
+
+    // ---------- Custom Calendar (always-on) ----------
+    const dateText   = $('callbackDateText');
+    const dateHidden = $('callbackDate');
+    const calendar   = $('calendar');
+    const calGrid    = $('calGrid');
+    const calLabel   = $('calLabel');
+    const prevBtn    = $('prevMonth');
+    const nextBtn    = $('nextMonth');
+    let calYear, calMonth;
+
+    function fmtYMD(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+
+    function openCalendar() {
+      const base = dateHidden.value ? new Date(dateHidden.value) : new Date();
+      calYear = base.getFullYear(); calMonth = base.getMonth();
+      buildCalendarGrid(calYear, calMonth); calendar.classList.add('visible');
+    }
+    function closeCalendar() { calendar.classList.remove('visible'); }
+
+    function buildCalendarGrid(year, month) {
+      calGrid.innerHTML = '';
+      const dows = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+      for (const w of dows) {
+        const el = document.createElement('div'); el.className = 'dow'; el.textContent = w;
+        calGrid.appendChild(el);
+      }
+      const first = new Date(year, month, 1);
+      const startDow = first.getDay();
+      const dim = new Date(year, month + 1, 0).getDate();
+
+      for (let i = 0; i < startDow; i++) calGrid.appendChild(document.createElement('div'));
+
+      const today = new Date();
+      const tY = today.getFullYear(), tM = today.getMonth(), tD = today.getDate();
+
+      for (let d = 1; d <= dim; d++) {
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'cal-day'; btn.textContent = d;
+        if (year === tY && month === tM && d === tD) btn.classList.add('today');
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          const chosen = new Date(year, month, d);
+          const ymd = fmtYMD(chosen);
+          dateHidden.value = ymd; dateText.value = ymd;
+          closeCalendar(); dateText.focus();
+        });
+        calGrid.appendChild(btn);
+      }
+      calLabel.textContent = new Date(year, month, 1).toLocaleString(undefined, { month: 'long', year: 'numeric' });
+    }
+
+    dateText.addEventListener('click', (e) => { e.stopPropagation(); openCalendar(); });
+    dateText.addEventListener('focus', (e) => { e.stopPropagation(); openCalendar(); });
+    prevBtn.addEventListener('click', (e) => { e.stopPropagation(); calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } buildCalendarGrid(calYear, calMonth); });
+    nextBtn.addEventListener('click', (e) => { e.stopPropagation(); calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } buildCalendarGrid(calYear, calMonth); });
+    document.addEventListener('click', (e) => {
+      if (calendar.classList.contains('visible')) {
+        const inside = calendar.contains(e.target) || e.target === dateText;
+        if (!inside) closeCalendar();
+      }
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCalendar(); });
+
+    (function presetToday() {
+      const today = new Date();
+      const ymd = fmtYMD(today);
+      if (!dateHidden.value) dateHidden.value = ymd;
+      if (!dateText.value)   dateText.value   = ymd;
+    })();
+
+    // ---------- Timezone (U.S. only) & offset ----------
+    const tzSelect   = $('timezone');
+    const offsetField= $('offset');
+
+    const US_TIMEZONES = [
+      { id: "America/New_York",   label: "Eastern — America/New_York" },
+      { id: "America/Chicago",    label: "Central — America/Chicago" },
+      { id: "America/Denver",     label: "Mountain — America/Denver" },
+      { id: "America/Phoenix",    label: "Arizona (no DST) — America/Phoenix" },
+      { id: "America/Los_Angeles",label: "Pacific — America/Los_Angeles" },
+      { id: "America/Anchorage",  label: "Alaska — America/Anchorage" },
+      { id: "Pacific/Honolulu",   label: "Hawaii — Pacific/Honolulu" }
+    ];
+
+    function populateTimeZonesUS() {
+      tzSelect.innerHTML = '';
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      const ordered = [...US_TIMEZONES].sort((a, b) => (a.id === detected ? -1 : (b.id === detected ? 1 : a.label.localeCompare(b.label))));
+      for (const z of ordered) {
+        const opt = document.createElement('option');
+        opt.value = z.id; opt.textContent = z.label;
+        if (z.id === detected) opt.selected = true;
+        tzSelect.appendChild(opt);
+      }
+      updateOffset();
+    }
+
+    function formatOffset(minutes) {
+      const sign = minutes >= 0 ? '+' : '-';
+      const abs = Math.abs(minutes);
+      const hh = String(Math.floor(abs / 60)).padStart(2, '0');
+      const mm = String(abs % 60).padStart(2, '0');
+      return `GMT${sign}${hh}:${mm}`;
+    }
+
+    function parseShortOffsetFromParts(tz, date = new Date()) {
+      try {
+        const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset', hour: '2-digit', minute: '2-digit' });
+        const str = fmt.format(date);
+        const match = str.match(/GMT[+-]\d{1,2}(:?\d{2})?/);
+        if (match) {
+          const m = match[0].match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+          if (m) {
+            const sign = m[1] === '-' ? -1 : 1;
+            const h = parseInt(m[2], 10);
+            const min = m[3] ? parseInt(m[3], 10) : 0;
+            return formatOffset(sign * (h * 60 + min));
+          }
+          return match[0];
+        }
+      } catch {}
+      // Fallback using part comparison
+      try {
+        const dateTime = new Date();
+        const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).formatToParts(dateTime);
+        const get = (type) => parts.find(p => p.type === type)?.value || '00';
+        const pseudoUTC = Date.parse(`${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:${get('second')}Z`);
+        const diffMinutes = Math.round((pseudoUTC - dateTime.getTime()) / 60000);
+        return formatOffset(diffMinutes);
+      } catch { return 'GMT+00:00'; }
+    }
+
+    function updateOffset() {
+      const tz = tzSelect.value;
+      const off = parseShortOffsetFromParts(tz, new Date());
+      offsetField.value = off;
+    }
+    tzSelect.addEventListener('change', updateOffset);
+
+    // ---------- Submit ----------
+    $('callbackForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!$('callbackTime').value) { $('timePicklist').setCustomValidity('Please select a time.'); $('timePicklist').reportValidity(); return; }
+      const data = Object.fromEntries(new FormData(e.currentTarget).entries());
+      const message = [
+        'Saved ?',
+        `Name: ${data.firstName || ''} ${data.lastName || ''}`.trim(),
+        `Phone: ${data.phone || '—'}`,
+        `Campaign: ${data.campaign || '—'}`,
+        `List: ${data.list || '—'}`,
+        `Callback: ${data.callbackDate || '—'} ${data.callbackTime || ''}`.trim(),
+        `Timezone: ${data.timezone || '—'} (${document.getElementById('offset').value || '—'})`
+      ].join('  •  ');
+      const statusEl = document.getElementById('status'); statusEl.textContent = message; statusEl.className = 'status ok';
+    });
+
+    // ---------- Init ----------
+    (function init() {
+      // Default date = today
+      const today = new Date();
+      const ymd = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+      if (!document.getElementById('callbackDate').value) document.getElementById('callbackDate').value = ymd;
+      if (!document.getElementById('callbackDateText').value) document.getElementById('callbackDateText').value = ymd;
+
+      populateTimeZonesUS();
+    })();
+  </script>
+</body>
+</html>
