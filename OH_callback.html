@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Five9 Callback Sync</title>
+  <title>Five9 Callback Sync - New Field</title>
   <style>
     :root { --bg:#f8fafc; --card:#ffffff; --fg:#0f172a; --muted:#64748b; --accent:#2563eb; --border:#e2e8f0; --radius:12px; }
     * { box-sizing:border-box; }
     body { margin:0; padding:40px 20px; background:var(--bg); color:var(--fg); font-family: 'Inter', system-ui, sans-serif; }
     .wrap { max-width:550px; margin:0 auto; }
-    .card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:30px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:30px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border:1px solid var(--border); }
     h2 { margin:0 0 20px; font-size:1.5rem; text-align:center; color:#1e293b; }
     
     label { display:block; font-size:.875rem; font-weight:600; color:#475569; margin-bottom:6px; }
@@ -26,7 +26,7 @@
     .ok { background:#ecfdf5; color:#10b981; border-color:#d1fae5; }
     .err { background:#fef2f2; color:#ef4444; border-color:#fee2e2; }
 
-    /* Calendar - Forced Black/Bold Font */
+    /* Calendar - Forced Black/Bold Font for maximum visibility */
     .calendar { position:absolute; z-index:100; background:#fff; border:1px solid var(--border); border-radius:8px; width:280px; padding:10px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); display:none; }
     .calendar.visible { display:block; }
     .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
@@ -44,11 +44,11 @@
       <div class="row">
         <div>
           <label>First Name</label>
-          <input id="firstName" type="text" placeholder="First Name" required />
+          <input id="firstName" type="text" placeholder="John" required />
         </div>
         <div>
           <label>Last Name</label>
-          <input id="lastName" type="text" placeholder="Last Name" required />
+          <input id="lastName" type="text" placeholder="Doe" required />
         </div>
       </div>
 
@@ -65,7 +65,7 @@
         </div>
       </div>
 
-      <label>Callback Time</label>
+      <label>Callback Time (Minute Precision)</label>
       <div class="time-row">
         <select id="hourPart"></select>
         <select id="minPart"></select>
@@ -78,7 +78,7 @@
       <label>Timezone</label>
       <select id="timezone"></select>
 
-      <button type="submit" id="submitBtn">Schedule Callback</button>
+      <button type="submit" id="submitBtn">Save Callback</button>
       <div id="status" class="status"></div>
     </form>
   </div>
@@ -87,7 +87,7 @@
 <script>
   const F9_DOMAIN = 'Five9 TAM DEMO - Kurt Laya';
   const F9_LIST = 'Callback';
-  const F9_API = 'https://api.five9.com/web2campaign/AddToList';
+  const F9_API_URL = 'https://api.five9.com/web2campaign/AddToList';
 
   const $ = (id) => document.getElementById(id);
   const pad = (n) => String(n).padStart(2, '0');
@@ -101,14 +101,12 @@
     const hh = $('hourPart');
     for(let i=1; i<=12; i++) hh.add(new Option(pad(i), pad(i)));
     
-    // Minute-by-minute selection
     const mm = $('minPart');
     for(let i=0; i<60; i++) mm.add(new Option(pad(i), pad(i)));
 
     const now = new Date();
     $('dateHidden').value = now.toISOString().split('T')[0];
     $('dateText').value = now.toISOString().split('T')[0];
-    
     initCalendar();
   }
 
@@ -139,13 +137,13 @@
     return new Promise(resolve => {
       const ifr = document.createElement('iframe');
       ifr.style.display = 'none';
-      ifr.src = `${F9_API}?${params.toString()}&_ts=${Date.now()}`;
+      ifr.src = `${F9_API_URL}?${params.toString()}&_cb=${Date.now()}`;
       document.body.appendChild(ifr);
       console.log(`Executing ${label}...`);
       setTimeout(() => {
         document.body.removeChild(ifr);
         resolve();
-      }, 800); 
+      }, 1000); 
     });
   }
 
@@ -154,7 +152,7 @@
     const btn = $('submitBtn');
     const status = $('status');
     btn.disabled = true;
-    status.textContent = "Processing...";
+    status.textContent = "Syncing with Five9...";
     status.className = "status visible ok";
 
     const phone = $('phone').value.replace(/\D/g, '').slice(-10);
@@ -169,39 +167,38 @@
     const tzShort = new Intl.DateTimeFormat('en-US', { timeZone: tzIana, timeZoneName: 'short' })
                          .formatToParts(dt).find(p => p.type === 'timeZoneName').value;
 
-    const f9TimeStr = `${pad(m)} ${pad(d)}, ${y} ${hour}:${min} ${ampm} ${tzShort}`;
-    const cbSchedStr = `${y}-${pad(m)}-${pad(d)} ${hour}:${min} ${ampm}`;
+    // Standard string used for Five9 System & Custom fields
+    const fullTimeStr = `${pad(m)} ${pad(d)}, ${y} ${hour}:${min} ${ampm} ${tzShort}`;
 
-    // Call 1: Critical System Time
+    // CALL 1: System Scheduler Update
     const params1 = new URLSearchParams({
       F9domain: F9_DOMAIN,
       F9list: F9_LIST,
       number1: phone,
       F9TimeFormat: 'MM dd, yyyy hh:mm a z',
-      F9TimeToCall: f9TimeStr,
+      F9TimeToCall: fullTimeStr,
       F9retResults: 'false'
     });
 
-    // Call 2: Record Data & Custom Strings
+    // CALL 2: Contact Record Update (Mapping to "Scheduled Callback")
     const params2 = new URLSearchParams({
       F9domain: F9_DOMAIN,
       F9list: F9_LIST,
       number1: phone,
       first_name: $('firstName').value,
       last_name: $('lastName').value,
-      'Callback Schedule': cbSchedStr,
-      'F9TimeSchedule': String(f9TimeStr),
+      'Scheduled Callback': fullTimeStr, // Updated to your new field name
       F9retResults: 'false'
     });
 
     try {
-      await fireApi(params1, "Time Sync");
-      await fireApi(params2, "Data Sync");
+      await fireApi(params1, "System Sync");
+      await fireApi(params2, "Custom Field Sync");
       
-      status.textContent = "Callback Scheduled!";
+      status.textContent = "Callback successfully updated!";
       status.className = "status visible ok";
     } catch (err) {
-      status.textContent = "Error syncing with Five9.";
+      status.textContent = "Update failed. Please check connection.";
       status.className = "status visible err";
     } finally {
       btn.disabled = false;
